@@ -67,6 +67,7 @@ class LabelWindow(PanelWindow):
             if key == ord('a'): return 'analyse'
             if key == ord('v'): return 'center'
             if key == ord('o'): return 'order'
+            if key == ord('r'): return 'run'
 
             if key == ord('x'):
                 key = cv2.waitKey(0)

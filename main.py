@@ -1,5 +1,6 @@
 from data_trawlers.mnist_trawler import MnistTrawler
 from panel_window.label_window import LabelWindow
+import mnist_CONV
 
 from mnist_VAE import VAE
 
@@ -12,7 +13,7 @@ if __name__ == "__main__":
     data_trawler = MnistTrawler()
     dataset = data_trawler.get_dataset("train")
 
-    vae = VAE(latent_dim=10)
+    vae = VAE(latent_dim=50)
     vae.build_models()
     vae.vae.load_weights('data/vae_mlp_mnist.h5')
 
@@ -58,6 +59,7 @@ if __name__ == "__main__":
             anno_dataset = dataset.dataset_from_anno(label_window.grid.anno_dict, "label")
             data_trawler.add_label_dataset(anno_dataset)
             data_trawler.find_labelled_centers(vae)
+            data_trawler.smv(vae)
 
         if process == 'center':
             dataset.save(label_window.grid.anno_dict)
@@ -82,6 +84,9 @@ if __name__ == "__main__":
             x, y, ptr = dataset.get_manual_batch(n_images, reset=True, order=order, filter=filter)
             x_imgs = dataset.batch_to_images(x, img_size)
             label_window.grid.assign_data(x, y, x_imgs, ptr, dataset.anno_dict)
+
+        if process == 'run':
+            mnist_CONV.run()
 
         if process == 'esc':
             break

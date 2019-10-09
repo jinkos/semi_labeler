@@ -42,7 +42,7 @@ def sampling(args):
 
 class VAE(object):
 
-    def __init__(self, latent_dim=10):
+    def __init__(self, latent_dim=50):
 
         self.n_digits = 10
         # MNIST dataset
@@ -278,9 +278,6 @@ def display_imgs(w, h, image_list, image_titles, plt_title, ion=True):
 
 def kmeans(epoch, vae, z_mean, n_clusters, do_show=True):
 
-    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(z_mean)
-    centers = kmeans.cluster_centers_
-    labels = kmeans.labels_
     gmm = mixture.GaussianMixture(n_components=n_clusters, covariance_type='full').fit(z_mean)
     centers = gmm.means_
     labels = gmm.predict(z_mean)
@@ -292,8 +289,6 @@ def kmeans(epoch, vae, z_mean, n_clusters, do_show=True):
     np_accuracy = np.zeros((n_clusters,))
     for i in range(n_clusters):
         cluster = np.expand_dims(centers[i], axis=0)
-        print(cluster)
-        print(np.mean(cluster))
         hits = np.sum(labels == i)
         meds = np.median(scores[labels == i])
 
@@ -319,7 +314,7 @@ def kmeans(epoch, vae, z_mean, n_clusters, do_show=True):
             count1 = counts[1][0]
             percy1 = count1/np.sum(all_digits==digit1)*100
 
-        print(digit0,count0,digit1,count1,hits,len(all_digits))
+        #print(digit0,count0,digit1,count1,hits,len(all_digits))
 
         image_titles.append("N={}, {}={}%, {}={}%".format(hits, digit0, int(round(percy0)), digit1, int(round(percy1))))
 
@@ -358,14 +353,13 @@ class TestCallback(Callback):
 
         kmeans(epoch, self.vae, z_mean, 10, do_show=True)
 
-
 if __name__ == "__main__":
 
     weights = False
     epochs = 50
     batch_size = 32
 
-    vae = VAE(latent_dim=10)
+    vae = VAE(latent_dim=20)
     vae.build_models()
     #vae.vae.load_weights('vae_mlp_mnist.h5')
     vae.build_losses(lr=0.00001)
@@ -379,14 +373,7 @@ if __name__ == "__main__":
                     batch_size=batch_size,
                     validation_data=(vae.x_test, None),
                     callbacks=[TestCallback(vae)],
-                    verbose=0)
+                    verbose=2)
 
     z_mean = predict_on_test_set(vae, batch_size)
 
-    for digit in range(10):
-        pass
-        #cool_stats(z_mean, digit)
-
-    kmeans(0, vae, z_mean, 10, do_show=True)
-
-    #plot_results(vae, batch_size)

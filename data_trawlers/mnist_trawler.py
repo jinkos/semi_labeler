@@ -1,5 +1,7 @@
 import scipy.spatial.distance as ssd
+from keras.utils import to_categorical
 from keras.datasets import mnist
+from sklearn import svm
 import numpy as np
 import pickle
 import cv2
@@ -13,7 +15,10 @@ class DataSet():
 
         self.n_classes = n_classes
         self.X = X
+        self.X_norm = self.X.astype('float32') / 255
+
         self.Y = Y
+        self.Y_hot = to_categorical(self.Y.astype(np.int32), self.n_classes)
         self.dataset_name = dataset_name
 
         self.n = X.shape[0]
@@ -200,6 +205,53 @@ class DataSet():
         self.y_vae = np.argmin(answer, axis=1)
         self.score_vae = np.min(answer, axis=1)
 
+
+    def smv_train(self, vae):
+
+        X = self.X.astype('float32') / 255
+        z_mean, z_log_var, _ = vae.encoder.predict(X, batch_size=64)
+
+        clf = svm.SVC(gamma='scale')
+        clf.fit(z_mean, self.Y)
+
+        return clf
+
+    def smv_test(self, vae, clf):
+
+        X = self.X.astype('float32') / 255
+        z_mean, z_log_var, _ = vae.encoder.predict(X, batch_size=64)
+
+        _y = clf.predict(z_mean)
+
+        count = _y.shape[0]
+        tick = np.count_nonzero(_y == self.Y)
+        cross = count - tick
+        print("SMV:", count, tick, cross, tick/count, cross/count)
+
+        def test_digit(_y, digit):
+
+            count = np.sum(digit == self.Y)
+            cond1 = _y == self.Y
+            cond2 = self.Y == digit
+            tick = np.sum(np.logical_and(cond1, cond2))
+            cross = count - tick
+            print(digit, "SMV:", count, tick, cross, tick/count, cross/count)
+
+        for digit in range(10):
+            test_digit(_y, digit)
+
+        def test_digit(_y, digit):
+
+            count = np.sum(digit == _y)
+            cond1 = _y == self.Y
+            cond2 = _y == digit
+            tick = np.sum(np.logical_and(cond1, cond2))
+            cross = count - tick
+            print(digit, "SMV:", count, tick, cross, tick/count, cross/count)
+
+        for digit in range(10):
+            test_digit(_y, digit)
+
 class MnistTrawler():
 
     def __init__(self, max_digits=10, shuffle=False):
@@ -247,6 +299,8 @@ class MnistTrawler():
             return self.test_set
         elif dataset == "train":
             return self.train_set
+        elif dataset == "label":
+            return self.label_set
         else:
             assert False, "don't recognise dataset called {}".format(dataset)
 
@@ -264,6 +318,10 @@ class MnistTrawler():
         center_list = label_set.find_labelled_centers(self.label_set, vae)
         label_set.plot_labelled_centers(self.label_set, vae, center_list)
         label_set.label_dataset(self.test_set, vae, center_list)
+
+    def smv(self, vae):
+        clf = self.label_set.smv_train(vae)
+        self.test_set.smv_test(vae, clf)
 
     def find_center_all_datasets(self, vae):
 
